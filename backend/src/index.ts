@@ -6,11 +6,15 @@ import { ApolloServerPluginDrainHttpServer } from "@apollo/server/plugin/drainHt
 import express from "express";
 import http from "http";
 import cors from "cors";
-
+import bodyParser from 'body-parser';
 import helmet from "helmet";
 import compress from "compression";
 
 const app = express();
+
+interface MyContext {
+  token?: string;
+}
 
 const typeDefs = `
   type Book {
@@ -39,17 +43,27 @@ const resolvers = {
   },
 };
 
-const server = new ApolloServer({
+const httpServer = http.createServer(app);
+const startServer = async () => {
+const server = new ApolloServer<MyContext>({
   typeDefs,
   resolvers,
+  plugins: [ApolloServerPluginDrainHttpServer({ httpServer })],
 });
 
-const startServer = async () => {
-  const { url } = await startStandaloneServer(server, { listen: { port: 4000 }, });
-  console.log(`🚀  Server ready at: ${url} localhost:4000`);
-} ;
+await server.start();
+app.use(
+  "/",
+    cors<cors.CorsRequest>(),
+    bodyParser.json(),
+    expressMiddleware(server, {
+      context: async ({ req }) => ({ token: req.headers.token }),
+    }),
+  );
+
+  await new Promise<void>((resolve) => httpServer.listen({ port: 4000 }, resolve));
+  console.log(`🚀 Server ready at http://localhost:4000/`);
+}
 
 startServer();
-
-
 // app.listen(8000, () => console.log("Listening on port http://localhost:8000"));
