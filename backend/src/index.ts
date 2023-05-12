@@ -1,5 +1,4 @@
 import { ApolloServer } from "@apollo/server";
-import { startStandaloneServer } from '@apollo/server/standalone';
 import { expressMiddleware } from "@apollo/server/express4";
 import { makeExecutableSchema } from "@graphql-tools/schema";
 import { ApolloServerPluginDrainHttpServer } from "@apollo/server/plugin/drainHttpServer";
@@ -44,16 +43,19 @@ const resolvers = {
 };
 
 const httpServer = http.createServer(app);
+
 const startServer = async () => {
 const server = new ApolloServer<MyContext>({
-  typeDefs,
-  resolvers,
+  schema: makeExecutableSchema({
+    typeDefs,
+    resolvers,
+  }),
   plugins: [ApolloServerPluginDrainHttpServer({ httpServer })],
 });
 
 await server.start();
 app.use(
-  "/",
+  "/graphql",
     cors<cors.CorsRequest>(),
     bodyParser.json(),
     expressMiddleware(server, {
@@ -66,4 +68,3 @@ app.use(
 }
 
 startServer();
-// app.listen(8000, () => console.log("Listening on port http://localhost:8000"));
